@@ -12,7 +12,26 @@ SECRET_KEY = 'django-insecure-0(4@@m57x4_i_$e#$ahb*mzbc!8d_$$5kt1tda)!ve8hhc=wx#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+
+# ALLOWED_HOSTS
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '.loca.lt',
+    '*.loca.lt',
+    'flat-teeth-remain.loca.lt',  # URL spécifique du backend
+]
+
+# CSRF TRUSTED ORIGINS
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.loca.lt',
+    'http://*.loca.lt',
+    'https://flat-teeth-remain.loca.lt',
+]
+
+# CORS
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 
 # Application definition
@@ -25,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'django_filters',
     'corsheaders',
     'api',
     'hr_dashboard',
@@ -65,13 +85,7 @@ SIMPLE_JWT = {
 }
 
 # Configuration CORS
-CORS_ALLOW_ALL_ORIGINS = True  # En développement uniquement
-CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
 
 CORS_ALLOW_METHODS = [
     'DELETE',
@@ -93,11 +107,6 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
-
-
-
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

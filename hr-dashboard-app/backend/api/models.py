@@ -44,6 +44,8 @@ class Employee(models.Model):
     id = models.CharField(max_length=20, primary_key=True)
     nom = models.CharField(max_length=100)
     prenom = models.CharField(max_length=100)
+    email = models.EmailField(blank=True, null=True)
+    telephone = models.CharField(max_length=20, blank=True, null=True)  # ex: 07 08 09 10 11
     poste = models.CharField(max_length=200)
     departement = models.CharField(max_length=100)
     date_embauche = models.DateField()
@@ -54,12 +56,11 @@ class Employee(models.Model):
     charges = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     primes = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     transport = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    telephone = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    cout_telephone = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     assurance = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     avantages = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     autres_recurrent = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     
-    # Métadonnées
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='employees_created')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -70,26 +71,51 @@ class Employee(models.Model):
         indexes = [
             models.Index(fields=['departement']),
             models.Index(fields=['type_contrat']),
+            models.Index(fields=['is_active']),
         ]
     
     def __str__(self):
         return f"{self.prenom} {self.nom} - {self.poste}"
     
     def monthly_recurring_cost(self):
-        """Calcul du coût récurrent mensuel"""
-        return (self.salaire + self.charges + self.primes + self.transport + 
-                self.telephone + self.assurance + self.avantages + self.autres_recurrent)
+        return (
+            self.salaire + self.charges + self.primes + self.transport +
+            self.cout_telephone + self.assurance + self.avantages + self.autres_recurrent
+        )
     
     def annual_salary(self):
-        """Salaire annuel"""
         return self.salaire * 12
     
-    def annual_cost(self, formations=[], depenses=[]):
-        """Coût annuel total incluant formations et dépenses"""
+    def annual_cost(self, formations=None, depenses=None):
+        if formations is None:
+            formations = []
+        if depenses is None:
+            depenses = []
         monthly = self.monthly_recurring_cost() * 12
         formations_total = sum(f.total_cost() for f in formations)
         depenses_total = sum(d.montant for d in depenses)
         return monthly + formations_total + depenses_total
+
+    @classmethod
+    def generate_id(cls):
+        last_employee = cls.objects.order_by('-id').first()
+        if not last_employee:
+            return 'EMP001'
+        last_id = last_employee.id
+        if last_id.startswith('EMP'):
+            try:
+                num = int(last_id[3:])
+                return f'EMP{num + 1:03d}'
+            except ValueError:
+                pass
+        count = cls.objects.count()
+        return f'EMP{count + 1:03d}'
+    
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.id = self.generate_id()
+        super().save(*args, **kwargs)
+
 
 class Formation(models.Model):
     """Modèle pour les formations"""
@@ -124,6 +150,26 @@ class Formation(models.Model):
         """Coût total de la formation"""
         return self.cout + self.deplacement + self.hebergement + self.autres
 
+    @classmethod
+    def generate_id(cls):
+        """Génère un ID unique pour les formations"""
+        last = cls.objects.order_by('-id').first()
+        if not last:
+            return 'F001'
+        try:
+            num = int(last.id[1:]) + 1
+            return f'F{num:03d}'
+        except ValueError:
+            count = cls.objects.count()
+            return f'F{count + 1:03d}'
+    
+    def save(self, *args, **kwargs):
+        """Surcharge de save pour générer automatiquement l'ID"""
+        if not self.id:
+            self.id = self.generate_id()
+        super().save(*args, **kwargs)
+
+
 class CategorieDepense(models.Model):
     """Modèle pour les catégories de dépenses personnalisables"""
     nom = models.CharField(max_length=100, unique=True)
@@ -140,6 +186,7 @@ class CategorieDepense(models.Model):
     
     def __str__(self):
         return self.nom
+
 
 class Depense(models.Model):
     """Modèle pour les autres dépenses ponctuelles"""
@@ -187,6 +234,26 @@ class Depense(models.Model):
     def __str__(self):
         return f"{self.get_categorie_display()} - {self.montant} FCFA"
 
+    @classmethod
+    def generate_id(cls):
+        """Génère un ID unique pour les dépenses"""
+        last = cls.objects.order_by('-id').first()
+        if not last:
+            return 'D001'
+        try:
+            num = int(last.id[1:]) + 1
+            return f'D{num:03d}'
+        except ValueError:
+            count = cls.objects.count()
+            return f'D{count + 1:03d}'
+    
+    def save(self, *args, **kwargs):
+        """Surcharge de save pour générer automatiquement l'ID"""
+        if not self.id:
+            self.id = self.generate_id()
+        super().save(*args, **kwargs)
+
+
 class PerformanceIndicateur(models.Model):
     """Modèle pour les KPIs et indicateurs de performance"""
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='indicateurs')
@@ -213,6 +280,7 @@ class PerformanceIndicateur(models.Model):
     
     def __str__(self):
         return f"{self.employee} - {self.date}"
+
 
 class Notification(models.Model):
     """Modèle pour les notifications"""
@@ -241,6 +309,7 @@ class Notification(models.Model):
     
     def __str__(self):
         return self.titre
+
 
 class ExportLog(models.Model):
     """Journal des exports Excel/PDF"""
@@ -273,6 +342,7 @@ class ExportLog(models.Model):
     def __str__(self):
         return f"{self.type_export} - {self.date_export}"
 
+
 class ParametreGlobal(models.Model):
     """Modèle pour les paramètres globaux de l'application"""
     cle = models.CharField(max_length=100, unique=True)
@@ -296,6 +366,7 @@ class ParametreGlobal(models.Model):
     def __str__(self):
         return f"{self.cle} = {self.valeur}"
 
+
 class Departement(models.Model):
     """Modèle pour les départements"""
     nom = models.CharField(max_length=100, unique=True)
@@ -318,6 +389,7 @@ class Departement(models.Model):
     def budget_restant(self):
         """Calcul du budget restant"""
         return self.budget_annuel - self.budget_utilise
+
 
 class PlanComptable(models.Model):
     """Modèle pour le plan comptable simplifié"""
@@ -343,6 +415,7 @@ class PlanComptable(models.Model):
     
     def __str__(self):
         return f"{self.numero} - {self.nom}"
+
 
 class OperationComptable(models.Model):
     """Modèle pour les opérations comptables"""
@@ -372,6 +445,7 @@ class OperationComptable(models.Model):
     
     def __str__(self):
         return f"{self.date} - {self.libelle}"
+
 
 class AuditLog(models.Model):
     """Modèle pour les logs d'audit"""

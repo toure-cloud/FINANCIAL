@@ -8,25 +8,38 @@ const Login = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    try {
-      const success = await login(formData);
-      if (success) {
-        navigate('/');
-      } else {
-        setError('Identifiants incorrects. Veuillez réessayer.');
-      }
-    } catch (err) {
-      setError('Erreur de connexion au serveur. Vérifiez que le backend est lancé.');
-    } finally {
-      setLoading(false);
+  console.log('📤 Tentative de login avec:', formData);
+
+  try {
+    const success = await login(formData);
+    console.log('📥 Résultat login:', success);
+    
+    if (success) {
+      console.log('✅ Connexion réussie, redirection...');
+      navigate('/');
+    } else {
+      setError('Identifiants incorrects. Veuillez réessayer.');
     }
-  };
+  } catch (err) {
+    console.error('❌ Erreur complète:', err);
+    console.error('❌ Détails erreur:', {
+      message: err.message,
+      response: err.response?.data,
+      status: err.response?.status,
+      config: err.config
+    });
+    setError('Erreur de connexion au serveur. Vérifiez que le backend est lancé.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div style={{
@@ -153,33 +166,67 @@ const Login = () => {
             }}>
               🔒 Mot de passe
             </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required
-              placeholder="Entrez votre mot de passe"
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                border: '1px solid #E4E7ED',
-                fontSize: '14px',
-                outline: 'none',
-                transition: 'all 0.2s ease',
-                background: 'rgba(255,255,255,0.8)',
-                fontFamily: 'Inter, sans-serif',
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#2F6F5E';
-                e.target.style.boxShadow = '0 0 0 3px rgba(47,111,94,0.1)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#E4E7ED';
-                e.target.style.boxShadow = 'none';
-              }}
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                required
+                placeholder="Entrez votre mot de passe"
+                style={{
+                  width: '100%',
+                  padding: '12px 45px 12px 16px',
+                  borderRadius: '12px',
+                  border: '1px solid #E4E7ED',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  background: 'rgba(255,255,255,0.8)',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#2F6F5E';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(47,111,94,0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#E4E7ED';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  fontSize: '18px',
+                  color: '#94A3B8',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '6px',
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.color = '#2F6F5E';
+                  e.target.style.background = 'rgba(47,111,94,0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.color = '#94A3B8';
+                  e.target.style.background = 'transparent';
+                }}
+                title={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+              >
+                {showPassword ? '👁️‍🗨️' : '👁️'}
+              </button>
+            </div>
           </div>
 
           <button
@@ -236,7 +283,7 @@ const Login = () => {
             borderTop: '1px solid #E4E7ED',
             paddingTop: '20px',
           }}>
-            🔐 Utilisez les identifiants du superutilisateur Django
+            🔐 Utilisez les identifiants du superutilisateur
           </p>
         </div>
       </div>
